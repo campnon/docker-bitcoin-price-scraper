@@ -28,7 +28,7 @@ Before cloning the repo, your friend should also have Git LFS installed.
 1. Run `git lfs install` on the target machine.
 2. Clone the repository:
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/campnon/docker-bitcoin-price-scraper
    ```
    Git LFS will automatically download the full parquet files instead of their pointer files.
 
