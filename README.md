@@ -22,31 +22,6 @@ This project is a containerized real-time cryptocurrency tick data scraper that 
 
 ---
 
-## Prerequisites & Large File Storage (Git LFS)
-
-Because the historical parquet files (`brti_prices.parquet` and `eth_prices.parquet`) are larger than 100MB, GitHub will reject pushing them directly. You must use **Git LFS (Large File Storage)** to push them to your repository.
-
-### Push to GitHub (On your machine)
-1. **Install Git LFS**:
-   Download and install Git LFS from [git-lfs.github.com](https://git-lfs.github.com/) or via your package manager:
-   ```bash
-   git lfs install
-   ```
-2. **Track Parquet files**:
-   Ensure Git LFS is configured to track `.parquet` files in this repository:
-   ```bash
-   git lfs track "*.parquet"
-   ```
-   *Note: This generates a `.gitattributes` file. Make sure to commit and push it.*
-
-3. **Commit and Push**:
-   ```bash
-   git add .gitattributes
-   # Add your files as usual
-   git add .
-   git commit -m "Initial commit with Git LFS configuration"
-   git push origin main
-   ```
 
 ### Pull from GitHub (On the server / friend's machine)
 Before cloning the repo, your friend should also have Git LFS installed.
