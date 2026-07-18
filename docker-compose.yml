@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  btc_scraper:
+    build: .
+    depends_on:
+      - db
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_NAME=market_monitoring
+      - DB_USER=postgres
+      - DB_PASSWORD=secure_password
+      - DB_HOST=db
+      - TARGET_URL=https://www.cfbenchmarks.com/data/indices/BRTI
+      - MARKET_ID=BRTI
+      - TABLE_NAME=brti_prices
+      - PARQUET_FILE=/app/data/brti_prices.parquet
+      - RUN_AGGREGATION=true
+      - AGGREGATION_FUNCTION=update_ohlc_from_brti()
+    restart: on-failure
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  eth_scraper:
+    build: .
+    depends_on:
+      - db
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_NAME=market_monitoring
+      - DB_USER=postgres
+      - DB_PASSWORD=secure_password
+      - DB_HOST=db
+      - TARGET_URL=https://www.cfbenchmarks.com/data/indices/ETHUSD_RTI
+      - MARKET_ID=ETHUSD_RTI
+      - TABLE_NAME=eth_prices
+      - PARQUET_FILE=/app/data/eth_prices.parquet
+      - RUN_AGGREGATION=false
+    restart: on-failure
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=market_monitoring
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secure_password
+    ports:
+      - "5432:5432"
+    command: ["postgres", "-c", "max_connections=200"]  
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/10_init.sql
+      - ./ohlc_setup.sql:/docker-entrypoint-initdb.d/20_ohlc_setup.sql
+
+volumes:
+  postgres_data:
