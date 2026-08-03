@@ -1,0 +1,16 @@
+import os
+
+# Kalshi API Configuration
+KALSHI_API_URL = "https://api.elections.kalshi.com/trade-api/v2"
+KALSHI_DEMO_URL = "https://demo-api.kalshi.co/trade-api/v2"
+
+# Kalshi API Credentials (if needed)
+KALSHI_KEY_ID = os.getenv("KALSHI_KEY_ID", "your_kalshi_key_id_here")
+KALSHI_PRIVATE_KEY_PATH = os.getenv("KALSHI_PRIVATE_KEY_PATH", "path/to/your/kalshi_key.pem")
+
+# Local Database Credentials
+DB_NAME = os.getenv("DB_NAME", "market_monitoring")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "your_local_db_password_here")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
