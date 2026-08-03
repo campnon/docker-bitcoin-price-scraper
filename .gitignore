@@ -151,6 +151,8 @@ desktop.ini
 
 # Exclude tests and scripts folders from git tracking
 tests/
-scripts/
 docs/planing.md
 docs/lookat.md
+scripts/config.py
+scripts/import_csv_history.py
+scripts/migrate_db.py
