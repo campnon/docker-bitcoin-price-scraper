@@ -6,18 +6,25 @@ This project is a containerized real-time cryptocurrency tick data scraper that 
 
 ```
 ├── data/
-│   ├── brti_prices.parquet    # Historical BTC tick data (approx. 160MB, track with Git LFS)
-│   └── eth_prices.parquet     # Historical ETH tick data (approx. 116MB, track with Git LFS)
-├── Dockerfile                 # Docker image building instructions
-├── docker-compose.yml         # Multi-container orchestration (scrapers and Postgres DB)
-├── entrypoint.py              # Platform-independent container boot coordinator (wait for DB, import history)
-├── import_parquet.py          # High-performance bulk importer using COPY protocol
-├── init.sql                   # Initial database schemas for brti_prices and eth_prices
-├── ohlc_setup.sql             # SQL schemas for btc_ohlc table and aggregation function
-├── main.py                    # Real-time WebSocket scraper client
-├── requirements.txt           # Python application dependencies
-├── .gitignore                 # Files excluded from Git tracking
-└── README.md                  # Setup & usage instructions
+│   ├── brti_prices.parquet       # Historical BTC tick data (approx. 160MB, track with Git LFS)
+│   └── eth_prices.parquet        # Historical ETH tick data (approx. 116MB, track with Git LFS)
+├── scripts/                      # Local management, migration, and export scripts
+│   ├── config.py.example         # Example template for local config settings (copy to config.py)
+│   ├── price_sync.py             # Remote-to-local DB synchronization tool (selective day/range syncing)
+│   ├── parquet_chart_data_bit.py # Local DB exporter (exports tables to Parquet or compressed CSV)
+│   ├── migrate_db.py             # DB migration script (idempotent, batch-wise)
+│   └── import_csv_history.py     # Imports historical daily/weekly/monthly OHLC CSV files
+├── Dockerfile                    # Docker image building instructions
+├── docker-compose.yml            # Multi-container orchestration (scrapers and Postgres DB)
+├── entrypoint.py                 # Platform-independent container boot coordinator (wait for DB, import history)
+├── import_parquet.py             # High-performance bulk importer using COPY protocol
+├── init.sql                      # Initial database schemas for brti_prices and eth_prices
+├── ohlc_setup.sql                # SQL schemas for btc_ohlc table and aggregation function
+├── main.py                       # Real-time WebSocket scraper client
+├── requirements.txt              # Python application dependencies
+├── .gitignore                    # Files excluded from Git tracking
+├── .env                          # Local environment variable overrides (ignored by Git)
+└── README.md                     # Setup & usage instructions
 ```
 
 ---
@@ -71,8 +78,81 @@ Everything is orchestrated using Docker Compose. Setting it up is extremely simp
 
 ---
 
+## Local Management Scripts
+
+The `scripts/` directory contains various utility scripts for database management, data synchronization, migrations, and exports.
+
+### 1. Configuration (`config.py`)
+To configure local database credentials:
+1. Copy the example config file:
+   ```bash
+   cp scripts/config.py.example scripts/config.py
+   ```
+2. Open `scripts/config.py` and set your local database host, port, username, and password. (Note: `config.py` is ignored by Git to keep your credentials secure).
+
+### 2. Environment Variables (`.env`)
+You can create a `.env` file at the root of the project to store sensitive settings, such as the remote database credentials:
+```env
+# Remote Database Configuration
+REMOTE_HOST=135.148.26.79
+REMOTE_PORT=5432
+TARGET_DB_NAME=market_monitoring
+TARGET_DB_USER=postgres_mesisamu
+TARGET_DB_PASSWORD=your_remote_db_password
+```
+This `.env` file is also ignored by Git.
+
+### 3. Remote-to-Local Database Sync (`price_sync.py`)
+Use this script to pull price records for specific day(s) or a date range from the remote database and merge them into your local database. It is timezone-aware (`America/New_York`) and uses server-side cursors to pull large datasets efficiently.
+
+- **Interactive Mode**:
+  Run the script with no arguments and follow the prompt:
+  ```bash
+  python scripts/price_sync.py
+  ```
+  *Pressing Enter at the prompt defaults to syncing **today**.*
+  
+- **CLI Argument Mode**:
+  Provide specific dates or ranges via the `--days` parameter:
+  ```bash
+  # Sync a single day
+  python scripts/price_sync.py --days 2026-08-01
+
+  # Sync multiple comma-separated days
+  python scripts/price_sync.py --days "2026-08-01, 2026-08-02"
+
+  # Sync a date range (inclusive of start and end days)
+  python scripts/price_sync.py --days "2026-08-01:2026-08-03"
+  ```
+
+### 4. Local Data Export (`parquet_chart_data_bit.py`)
+Exports local database tables into local data files.
+- **Usage**:
+  ```bash
+  python scripts/parquet_chart_data_bit.py
+  ```
+- **Configuration**: Inside the script, you can set `EXPORT_FORMAT` to `"parquet"` (requires `pyarrow` installed: `pip install pyarrow`) or `"csv"` (exports to a compressed `.csv.gz` file). Files are written to the `data/` folder.
+
+### 5. Database Migration (`migrate_db.py`)
+Used to migrate price data between a source database and a target database in bulk batches with conflict handling.
+- **Usage**:
+  Set the target host environment variable and run:
+  ```bash
+  TARGET_DB_HOST=your_target_ip python scripts/migrate_db.py
+  ```
+
+### 6. Historical CSV Import (`import_csv_history.py`)
+Pre-loads daily, weekly, and monthly historical OHLC data from CSV files (`daily.csv`, `weekly.csv`, `monthly.csv`) into the local `btc_ohlc` database table.
+- **Usage**:
+  ```bash
+  python scripts/import_csv_history.py
+  ```
+
+---
+
 ## Technical Details
 
 - **Bulk Import Speed**: Instead of standard row-by-row inserts (which would take hours for 16M rows), `import_parquet.py` reads the parquet in chunks and utilizes the PostgreSQL `COPY` protocol via `psycopg2`'s `copy_expert`.
 - **Platform-Independent Startup**: `entrypoint.py` is written in Python rather than Bash to avoid CRLF/LF line-ending incompatibilities between Windows and Linux environments.
 - **Aggregations**: Bitcoin aggregations are performed database-side via `ohlc_setup.sql`. The logic is invoked by the Python client and runs in `update_ohlc_from_brti()`.
+
